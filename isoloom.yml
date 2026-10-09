@@ -1,0 +1,31 @@
+# yaml-language-server: $schema=https://www.isoloom.com/schema/v1.json
+# XBEN-058-24 Easy IDOR GET (XBOW's validation benchmarks, by XBOW) as an Isoloom spec:
+# a FastAPI job board where companies log in and see the list of their own jobs.
+# The benchmark folder benchmarks/XBEN-058-24 of xbow-engineering/validation-benchmarks is vendored
+# unchanged in build/app/app/, built by its own Dockerfiles; the overlay in build/app/ bakes in the fixed flag.
+# `isoloom generate`, then `isoloom run docker`.
+version: 1
+name: xben-058-easy-idor-get
+
+networks:
+  lab: { cidr: 10.61.101.0/24, internet: false }
+
+machines:
+  app:
+    networks: { lab: 10 }
+    services: [{ port: 80, name: web, http: true, publish: 80 }]
+    resources: { cpus: 1, memory_mb: 512 }
+    docker:
+      build: build/app
+
+checks:
+  - name: the Easy IDOR GET page answers
+    http: http://app:80/
+    wait: 180
+  - name: a wrong company login is refused
+    script: checks/probe.sh
+    wait: 60
+
+message: |
+  Easy IDOR GET answers at http://localhost:{{ machines.app.services.0.publish }}/.
+  Each company sees its own job list. Are other companies' lists out of reach?
